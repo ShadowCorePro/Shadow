@@ -1,0 +1,261 @@
+-- ShadowCore with custom animated toggles - minimal demo features in each tab
+local Library = loadstring(game:HttpGetAsync("https://github.com/ActualMasterOogway/Fluent-Renewed/releases/latest/download/Fluent.luau"))()
+local SaveManager = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/ActualMasterOogway/Fluent-Renewed/master/Addons/SaveManager.luau"))()
+local InterfaceManager = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/ActualMasterOogway/Fluent-Renewed/master/Addons/InterfaceManager.luau"))()
+
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+-- ========== Custom Toggle, fully inlined ==========
+local function CustomToggle(tab, Idx, Config)
+    assert(Config.Title, "Toggle - Missing Title")
+    local Toggle = {
+        Value = Config.Default or false,
+        Callback = Config.Callback or function(Value) end,
+        Type = "Toggle",
+    }
+
+    local ToggleFrame = tab:CreateParagraph({Title = Config.Title, Content = Config.Description or ""})
+    local Parent = ToggleFrame.Frame or ToggleFrame._frame or ToggleFrame
+    Parent.Size = UDim2.new(1, 0, 0, 28)
+
+    for _,v in ipairs(Parent:GetChildren()) do
+        if v:IsA("TextLabel") then
+            v.TextWrapped = false
+            v.TextYAlignment = Enum.TextYAlignment.Center
+            v.TextXAlignment = Enum.TextXAlignment.Left
+        end
+    end
+
+    local ToggleSlider = Instance.new("Frame")
+    ToggleSlider.Size = UDim2.fromOffset(36, 18)
+    ToggleSlider.AnchorPoint = Vector2.new(1, 0.5)
+    ToggleSlider.Position = UDim2.new(1, -10, 0.5, 0)
+    ToggleSlider.BackgroundColor3 = Color3.fromRGB(207, 62, 62)
+    ToggleSlider.BackgroundTransparency = Toggle.Value and 0 or 1
+    ToggleSlider.Parent = Parent
+
+    local UICorner = Instance.new("UICorner")
+    UICorner.CornerRadius = UDim.new(0, 9)
+    UICorner.Parent = ToggleSlider
+
+    local ToggleBorder = Instance.new("UIStroke")
+    ToggleBorder.Thickness = 1.2
+    ToggleBorder.Transparency = 0.5
+    ToggleBorder.Color = Toggle.Value and Color3.fromRGB(207, 62, 62) or Color3.fromRGB(170, 170, 170)
+    ToggleBorder.Parent = ToggleSlider
+
+    local ToggleCircle = Instance.new("ImageLabel")
+    ToggleCircle.AnchorPoint = Vector2.new(0, 0.5)
+    ToggleCircle.Size = UDim2.fromOffset(14, 14)
+    ToggleCircle.Position = UDim2.new(0, Toggle.Value and 19 or 2, 0.5, 0)
+    ToggleCircle.Image = "http://www.roblox.com/asset/?id=12266946128"
+    ToggleCircle.BackgroundTransparency = 1
+    ToggleCircle.ImageTransparency = Toggle.Value and 0 or 0.5
+    ToggleCircle.ImageColor3 = Toggle.Value and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(170, 170, 170)
+    ToggleCircle.Parent = ToggleSlider
+
+    function Toggle:SetValue(Value)
+        Value = not not Value
+        Toggle.Value = Value
+        TweenService:Create(ToggleCircle, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+            Position = UDim2.new(0, Value and 19 or 2, 0.5, 0),
+            ImageColor3 = Value and Color3.fromRGB(255,255,255) or Color3.fromRGB(170,170,170),
+            ImageTransparency = Value and 0 or 0.5
+        }):Play()
+        TweenService:Create(ToggleSlider, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+            BackgroundTransparency = Value and 0 or 1
+        }):Play()
+        ToggleBorder.Color = Value and Color3.fromRGB(207, 62, 62) or Color3.fromRGB(170, 170, 170)
+        if Toggle.Callback then Toggle.Callback(Value) end
+        if Toggle.Changed then Toggle.Changed(Value) end
+    end
+
+    function Toggle:OnChanged(Func)
+        Toggle.Changed = Func
+        Func(Toggle.Value)
+    end
+
+    function Toggle:Destroy()
+        Parent:Destroy()
+    end
+
+    Parent.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            Toggle:SetValue(not Toggle.Value)
+        end
+    end)
+
+    Toggle:SetValue(Toggle.Value)
+    return Toggle
+end
+
+-- Create main window
+local Window = Library:CreateWindow{
+    Title = "ShadowCore" .. Library.Version,
+    SubTitle = "by Sin",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(580, 460),
+    Acrylic = true,
+    Theme = "Dark",
+    MinimizeKey = Enum.KeyCode.LeftControl
+}
+
+-- Tabs
+local Tabs = {
+    Fun = Window:CreateTab{ Title = "Fun", Icon = "phosphor-smiley" },
+    Automation = Window:CreateTab{ Title = "Automation", Icon = "phosphor-robot-bold" },
+    BringStuff = Window:CreateTab{ Title = "Bring Stuff", Icon = "phosphor-apple-logo" },
+    Main = Window:CreateTab{ Title = "Main", Icon = "phosphor-house-bold" },
+    AutoBandage = Window:CreateTab{ Title = "Auto Bandage", Icon = "phosphor-first-aid-bold" },
+    Teleport = Window:CreateTab{ Title = "Teleport", Icon = "phosphor-television-bold" },
+    Visuals = Window:CreateTab{ Title = "Visuals", Icon = "phosphor-eye-bold" },
+    LocalPlayer = Window:CreateTab{ Title = "Local Player", Icon = "phosphor-user-bold" },
+    Information = Window:CreateTab{ Title = "Information", Icon = "phosphor-info-bold" },
+    Misc = Window:CreateTab{ Title = "Misc", Icon = "phosphor-gear-bold" },
+    Theme = Window:CreateTab{ Title = "Theme", Icon = "phosphor-palette-bold" },
+    Config = Window:CreateTab{ Title = "Config", Icon = "phosphor-database-bold" },
+}
+
+-- ========== Fun Tab ==========
+do
+    local tab = Tabs.Fun
+    tab:CreateParagraph({ Title = "Welcome!", Content = "Enjoy using ShadowCore.\nThis is the Fun tab." })
+    CustomToggle(tab, "FunTestToggle", {
+        Title = "Enable Fun Mode",
+        Default = false,
+        Callback = function(val) Library:Notify{ Title = "Fun Mode", Content = val and "Fun Mode Enabled!" or "Fun Mode Disabled!", Duration = 2 } end
+    })
+end
+
+-- ========== Automation Tab ==========
+do
+    local tab = Tabs.Automation
+    tab:CreateParagraph({ Title = "Automation", Content = "Automate your tasks here." })
+    CustomToggle(tab, "AutoFarm", {
+        Title = "Auto Farm",
+        Default = false,
+        Callback = function(val) Library:Notify{ Title = "Auto Farm", Content = val and "Auto Farm Started!" or "Auto Farm Stopped!", Duration = 2 } end
+    })
+end
+
+-- ========== Bring Stuff Tab ==========
+do
+    local tab = Tabs.BringStuff
+    tab:CreateParagraph({ Title = "Bring Stuff", Content = "Bring items to your character here." })
+    tab:CreateButton({
+        Title = "Bring All Coins",
+        Callback = function() Library:Notify{ Title = "Bring Stuff", Content = "All coins brought to you!", Duration = 2 } end
+    })
+end
+
+-- ========== Main Tab ==========
+do
+    local tab = Tabs.Main
+    tab:CreateParagraph({ Title = "Main", Content = "Core features and status display." })
+    CustomToggle(tab, "GodMode", {
+        Title = "God Mode",
+        Default = false,
+        Callback = function(val) Library:Notify{ Title = "God Mode", Content = val and "God Mode Activated!" or "God Mode Deactivated!", Duration = 2 } end
+    })
+end
+
+-- ========== Auto Bandage Tab ==========
+do
+    local tab = Tabs.AutoBandage
+    tab:CreateParagraph({ Title = "Auto Bandage", Content = "Keep yourself healed automatically." })
+    CustomToggle(tab, "AutoBandage", {
+        Title = "Auto Bandage",
+        Default = false,
+        Callback = function(val) Library:Notify{ Title = "Auto Bandage", Content = val and "Auto Bandage ON" or "Auto Bandage OFF", Duration = 2 } end
+    })
+end
+
+-- ========== Teleport Tab ==========
+do
+    local tab = Tabs.Teleport
+    tab:CreateParagraph({ Title = "Teleport", Content = "Teleport anywhere instantly." })
+    tab:CreateButton({
+        Title = "Teleport to Spawn",
+        Callback = function() Library:Notify{ Title = "Teleport", Content = "Teleported to Spawn!", Duration = 2 } end
+    })
+end
+
+-- ========== Visuals Tab ==========
+do
+    local tab = Tabs.Visuals
+    tab:CreateParagraph({ Title = "Visuals", Content = "Change how things look." })
+    CustomToggle(tab, "ESP", {
+        Title = "Enable ESP",
+        Default = false,
+        Callback = function(val) Library:Notify{ Title = "ESP", Content = val and "ESP Enabled!" or "ESP Disabled!", Duration = 2 } end
+    })
+end
+
+-- ========== Local Player Tab ==========
+do
+    local tab = Tabs.LocalPlayer
+    tab:CreateParagraph({ Title = "Local Player", Content = "Change your own stats." })
+    tab:CreateButton({
+        Title = "Reset Character",
+        Callback = function() Library:Notify{ Title = "Local Player", Content = "Character Reset!", Duration = 2 } end
+    })
+end
+
+-- ========== Information Tab ==========
+do
+    local tab = Tabs.Information
+    tab:CreateParagraph({ Title = "Information", Content = "ShadowCore by Sin\nVersion: "..Library.Version })
+end
+
+-- ========== Misc Tab ==========
+do
+    local tab = Tabs.Misc
+    tab:CreateParagraph({ Title = "Misc", Content = "Other useful features." })
+    tab:CreateButton({
+        Title = "Copy Discord Link",
+        Callback = function() setclipboard("https://discord.gg/shadowcore") Library:Notify{ Title = "Misc", Content = "Discord link copied!", Duration = 2 } end
+    })
+end
+
+-- ========== Theme Tab ==========
+do
+    local tab = Tabs.Theme
+    tab:CreateParagraph({ Title = "Theme", Content = "Customize your UI theme here." })
+end
+
+-- ========== Config Tab ==========
+do
+    local tab = Tabs.Config
+    tab:CreateParagraph({ Title = "Config", Content = "Save and load your ShadowCore settings here." })
+end
+
+-- ========== Profile at Bottom Left ==========
+do
+    local username = LocalPlayer.Name
+    local usertag = "@"..username
+    local thumb = "https://www.roblox.com/headshot-thumbnail/image?userId="..LocalPlayer.UserId.."&width=420&height=420&format=png"
+    Tabs.Main:CreateImage("UserAvatar", {
+        Title = username,
+        Url = thumb,
+        Size = UDim2.fromOffset(54,54)
+    })
+    Tabs.Main:CreateParagraph({
+        Title = "",
+        Content = usertag
+    })
+end
+
+-- OPTIONAL: SaveManager & InterfaceManager
+SaveManager:SetLibrary(Library)
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetFolder("Voidware/SomeGame")
+InterfaceManager:SetLibrary(Library)
+InterfaceManager:SetFolder("Voidware")
+InterfaceManager:BuildInterfaceSection(Tabs.Main)
+SaveManager:BuildConfigSection(Tabs.Main)
+
+Window:SelectTab(Tabs.Main)
+Library:Notify{ Title = "Voidware", Content = "The script has been loaded.", Duration = 6 }
+SaveManager:LoadAutoloadConfig()
